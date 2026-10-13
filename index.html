@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QWQ AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<style>
+:root{--board:#111114;--board2:#1E1E24;--deep:#000;--wood:#2A2A32;--wood2:#3A3A44;--chalk:#F2F2F2;--dim:#8A8A93;--yel:#B9A7FF;--mint:#7FE3C4;--pink:#FF8FA3;--line:rgba(255,255,255,.09)}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--deep);color:var(--chalk);font-family:Rubik,system-ui,sans-serif;font-size:16px;line-height:1.5;overflow-x:hidden;
+ padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+main{max-width:640px;margin:0 auto;padding:16px;position:relative;z-index:1}
+svg{display:block}
+
+/* бор шаңы фоны */
+#dust{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#dust circle{fill:var(--chalk);opacity:0;animation:dust linear infinite}
+@keyframes dust{0%{transform:translateY(0);opacity:0}15%{opacity:.18}85%{opacity:.12}100%{transform:translateY(-110vh);opacity:0}}
+
+/* кіру анимациясы */
+.rise{opacity:0;transform:translateY(14px);animation:rise .6s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:var(--d,0s)}
+@keyframes rise{to{opacity:1;transform:none}}
+
+header{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
+header svg{width:34px;height:34px}
+h1{font-size:26px;font-weight:700;margin:0;letter-spacing:-.01em}
+.sub{color:var(--dim);margin:0;font-size:13px}
+#logoChalk *{stroke-dasharray:60;stroke-dashoffset:60;animation:draw 1.4s .2s ease forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+.board{background:radial-gradient(120% 70% at 85% 0%,rgba(185,167,255,.13),transparent 60%),radial-gradient(90% 60% at 0% 100%,rgba(127,227,196,.07),transparent 60%),#0B0B0E;border:1px solid var(--line);border-radius:24px;padding:16px 18px 18px;
+ box-shadow:0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);position:relative}
+.eye,.bulb{filter:drop-shadow(0 0 5px #B9A7FF)}
+#ring{filter:drop-shadow(0 0 6px rgba(185,167,255,.6))}
+.tabs,.lvl,input,select,.m.a,.pix svg,.codebox{background:#000;border:1px solid var(--line);border-radius:12px;padding:12px;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mint);max-height:260px;min-height:64px;overflow:auto;white-space:pre;margin:6px 0 0}
+.badge{display:inline-block;margin-top:8px;padding:3px 12px;border-radius:20px;font-size:13px;opacity:0;transform:scale(.7);transition:opacity .3s,transform .4s cubic-bezier(.3,1.5,.5,1)}
+.badge.show{opacity:1;transform:none}
+.badge.ok{background:rgba(127,227,196,.12);color:var(--mint);border:1px solid rgba(127,227,196,.35)}
+.badge.bad{background:rgba(255,143,163,.1);color:var(--pink);border:1px solid rgba(255,143,163,.3)}
+.m pre{margin:0;font:12.5px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;color:var(--mint)}
+.m svg.mini{border:1px solid var(--line)}
+.cloud{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:20px;padding:4px 10px}
+.cloud i{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.cloud.on i{background:var(--mint);box-shadow:0 0 8px var(--mint);animation:pulse 2s infinite}
+textarea{font:inherit;font-size:13px;width:100%;min-height:110px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--board);color:var(--chalk);resize:vertical}
+textarea:focus{border-color:var(--yel);outline:none}
+#fbOk{font-size:13px;color:var(--mint);margin-top:6px;min-height:18px}
+
+/* сахна */
+#stage{width:100%;height:auto}
+#stage .lbl{fill:var(--dim);font:500 12px Rubik,sans-serif;text-anchor:middle}
+.teacher{transform-box:fill-box;transform-origin:center;animation:twinkle 3s ease-in-out infinite}
+@keyframes twinkle{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.08) rotate(8deg)}}
+.teach .teacher{animation:spin 1.6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.beam{stroke:var(--chalk);stroke-width:2;fill:none;stroke-dasharray:4 8;opacity:.25;transition:opacity .4s}
+.teach .beam{opacity:.8;animation:flow .6s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-12}}
+.flow{opacity:0;transition:opacity .3s}
+.teach .flow{opacity:1}
+.flow text{fill:var(--yel);font:700 15px Rubik,sans-serif;text-anchor:middle}
+.student{animation:bob 3.2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.eye{transform-box:fill-box;transform-origin:center;animation:blink 4.5s infinite}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.learn .eye{animation:look 1.2s ease-in-out infinite}
+@keyframes look{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
+.mouth{transform-box:fill-box;transform-origin:center;transition:d .3s}
+.talk .mouth{animation:talk .22s ease-in-out infinite alternate}
+@keyframes talk{from{transform:scaleY(1)}to{transform:scaleY(2.6)}}
+.bulb{transform-box:fill-box;transform-origin:center;animation:pulse 2s ease-in-out infinite}
+.learn .bulb{animation-duration:.5s}
+@keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}
+#ring{transition:stroke-dashoffset .35s ease}
+.spark{opacity:0;transform-box:fill-box;transform-origin:center}
+.happy .student{animation:hop .7s ease}
+@keyframes hop{30%{transform:translateY(-12px)}60%{transform:translateY(0)}80%{transform:translateY(-4px)}}
+.happy .spark{animation:spark .9s ease forwards;animation-delay:var(--d)}
+@keyframes spark{0%{opacity:0;transform:scale(.2)}40%{opacity:1;transform:scale(1.2) rotate(40deg)}100%{opacity:0;transform:scale(.6) rotate(90deg)}}
+
+.qa{border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+.qa .t{color:var(--dim);font-size:13px}
+.qa .q{font-size:17px;margin:2px 0 8px;min-height:26px}
+.qa .ans{font-size:22px;font-weight:500;color:var(--yel);word-break:break-word;min-height:34px}
+.caret{display:inline-block;width:2px;height:1em;background:var(--yel);vertical-align:-2px;margin-left:2px;animation:caret .8s steps(1) infinite}
+@keyframes caret{50%{opacity:0}}
+.qa .ok{color:var(--dim);font-size:14px;margin-top:6px;opacity:0;transition:opacity .5s}
+.qa .ok.show{opacity:1}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 4px}
+.stat{display:flex;gap:8px;align-items:center}
+.stat svg{width:30px;height:30px;flex:none}
+.stat b{display:block;font-size:20px;font-weight:700;line-height:1.1}
+.stat span{color:var(--dim);font-size:12px}
+.stat .ico{stroke:var(--chalk);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:80;stroke-dashoffset:80;animation:draw 1.2s ease forwards;animation-delay:var(--d)}
+.bump{animation:bump .5s ease}
+@keyframes bump{40%{transform:scale(1.25);color:var(--yel)}}
+
+#chart{width:100%;height:100px;margin-top:8px;border-top:1px solid var(--line)}
+#cLine{fill:none;stroke:var(--yel);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+#cArea{fill:url(#gArea);opacity:0;transition:opacity .8s .6s}
+#cArea.on{opacity:1}
+#cDot{fill:var(--yel);transform-box:fill-box;transform-origin:center;animation:pulse 1.4s infinite}
+.empty{fill:var(--dim);font:400 12px Rubik,sans-serif}
+
+.row{display:flex;gap:8px;margin:14px 0}
+button{font:inherit;font-weight:500;border:0;border-radius:12px;padding:13px 16px;cursor:pointer;background:var(--chalk);color:var(--deep);
+ display:inline-flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;transition:transform .15s}
+button:active{transform:scale(.96)}
+button svg{width:20px;height:20px}
+button.big{flex:1;font-size:17px;background:var(--yel)}
+button.ghost{background:transparent;color:var(--chalk);border:1px solid var(--line)}
+button:disabled{opacity:.5;cursor:default}
+.ripple{position:absolute;border-radius:50%;background:rgba(0,0,0,.25);transform:scale(0);animation:rip .6s ease-out forwards;pointer-events:none}
+@keyframes rip{to{transform:scale(4);opacity:0}}
+#icoPlay,#icoStop{transition:opacity .25s,transform .35s}
+.running #icoPlay{opacity:0;transform:rotate(90deg) scale(.4)}
+#icoStop{opacity:0;transform:rotate(-90deg) scale(.4)}
+.running #icoStop{opacity:1;transform:none}
+#icoPlay,#icoStop{transform-box:fill-box;transform-origin:center}
+#prog{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:-6px;opacity:0;transition:opacity .3s}
+#prog.on{opacity:1}
+#prog i{display:block;height:100%;width:0;background:var(--yel);transition:width .35s}
+#status{color:var(--dim);font-size:14px;min-height:21px;margin-top:8px;transition:opacity .2s}
+#status.err{color:var(--pink)}
+#status.fade{opacity:0}
+
+section{margin-top:22px}
+h2{font-size:18px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+h2 svg{width:22px;height:22px}
+.wig{transform-box:fill-box;transform-origin:center;animation:wiggle 4s ease-in-out infinite}
+@keyframes wiggle{0%,90%,100%{transform:rotate(0)}93%{transform:rotate(-12deg)}96%{transform:rotate(10deg)}}
+input{font:inherit;width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--board);color:var(--chalk);transition:border-color .2s,box-shadow .2s}
+input:focus{border-color:var(--yel);box-shadow:0 0 0 3px rgba(185,167,255,.15);outline:none}
+label{display:block;font-size:14px;color:var(--dim);margin:10px 0 4px}
+#chat{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.m{padding:8px 12px;border-radius:14px;max-width:85%;word-break:break-word;animation:pop .35s cubic-bezier(.3,1.5,.5,1)}
+@keyframes pop{from{opacity:0;transform:scale(.6) translateY(8px)}}
+.m.u{align-self:flex-end;background:var(--chalk);color:var(--deep);transform-origin:right bottom}
+.m.a{align-self:flex-start;background:var(--board);color:var(--yel);transform-origin:left bottom}
+.dots circle{fill:var(--yel);animation:dot 1s infinite}
+.dots circle:nth-child(2){animation-delay:.15s}.dots circle:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+details{border-top:1px solid var(--line);padding-top:12px;margin-top:22px}
+summary{cursor:pointer;font-weight:500;list-style:none;display:flex;align-items:center;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary svg{width:20px;height:20px}
+.chev{margin-left:auto;transition:transform .3s}
+details[open] .chev{transform:rotate(180deg)}
+.gear{transform-box:fill-box;transform-origin:center;transition:transform .8s}
+details[open] .gear{transform:rotate(180deg)}
+details[open] .body{animation:rise .4s ease}
+pre{white-space:pre-wrap;font:inherit;font-size:14px;color:var(--dim);max-height:220px;overflow:auto;margin:6px 0 0}
+.hint{font-size:13px;color:var(--dim)}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--yel);outline-offset:2px}
+.ln{stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+/* қосымша: табтар, панельдер, пиксель, математика */
+.tabs{position:relative;display:grid;grid-template-columns:repeat(4,1fr);background:var(--board);border-radius:14px;padding:4px;margin-bottom:12px}
+.tab{background:transparent;color:var(--dim);padding:8px 2px;font-size:12.5px;flex-direction:column;gap:2px;z-index:1;border-radius:10px;transition:color .3s,transform .15s}
+.tab svg{width:20px;height:20px}
+.tab.on{color:var(--deep)}
+.tab.on svg{animation:hop .5s ease}
+.tabInd{position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px)/4);background:var(--yel);border-radius:10px;transition:transform .45s cubic-bezier(.3,1.3,.5,1)}
+.panel{display:none}
+.panel.show{display:block;animation:panelIn .45s ease}
+@keyframes panelIn{from{opacity:0;transform:translateX(18px)}}
+.lvl{display:inline-flex;align-items:center;gap:6px;background:var(--deep);border-radius:20px;padding:4px 12px;font-size:13px;color:var(--yel)}
+.eq{display:flex;align-items:center;gap:10px;font-size:34px;font-weight:700;margin:10px 0 2px;min-height:52px;flex-wrap:wrap}
+.eq .ans{font-size:34px;min-height:0}
+#mMark{width:36px;height:36px}
+#mMarkP{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:40;stroke-dashoffset:40}
+#mMarkP.go{animation:draw .5s ease forwards}
+.pix{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.pix figure{margin:0}
+.pix svg{width:100%;aspect-ratio:1;background:var(--deep);border-radius:10px}
+.pix figcaption{color:var(--dim);font-size:13px;text-align:center;margin-top:4px}
+rect.px{fill:var(--chalk);transform-box:fill-box;transform-origin:center;animation:pxIn .4s ease both}
+@keyframes pxIn{from{opacity:0;transform:scale(.1)}}
+.m svg.mini{width:112px;height:112px;background:var(--deep);border-radius:8px;display:block}
+select{font:inherit;width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--board);color:var(--chalk)}
+.chats>div{display:none;flex-direction:column;gap:6px;margin-bottom:8px}
+.chats>div.show{display:flex}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<svg id="dust" aria-hidden="true"></svg>
+<main>
+<header class="rise">
+ <svg viewBox="0 0 40 40" aria-hidden="true" style="width:40px;height:40px">
+  <rect x="1" y="1" width="38" height="38" rx="12" fill="#111114" stroke="rgba(255,255,255,.12)"/>
+  <g id="logoChalk" fill="none" stroke="#B9A7FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+   <circle cx="12.5" cy="16" r="4"/><path d="M14.5 18.5l2 2"/>
+   <circle cx="27.5" cy="16" r="4"/><path d="M29.5 18.5l2 2"/>
+   <path d="M13 27l3 3 4-3 4 3 3-3" stroke="#7FE3C4"/>
+  </g>
+ </svg>
+ <div><h1>QWQ AI</h1><p class="sub">Нөлден үйренетін өз жасанды интеллектің.</p></div>
+ <span class="cloud" id="cloud"><i></i><span id="cloudTxt">Жергілікті</span></span>
+</header>
+
+<div class="tabs rise" style="--d:.05s" role="tablist">
+ <div class="tabInd" id="tabInd"></div>
+ <button class="tab on" data-k="lang" role="tab"><svg viewBox="0 0 20 20"><path class="ln" d="M3 4h14v9H8l-4 3v-3H3z"/></svg>Тіл</button>
+ <button class="tab" data-k="math" role="tab"><svg viewBox="0 0 20 20"><path class="ln" d="M4 3h12v14H4zM7 6h6M7 10h1M10 10h1M13 10h0M7 13h1M10 13h1M13 10v3"/></svg>Математика</button>
+ <button class="tab" data-k="art" role="tab"><svg viewBox="0 0 20 20"><path class="ln" d="M10 3a7 7 0 1 0 0 14c1.5 0 1.5-1.5.8-2.4-.7-.9 0-2.1 1.2-2.1H14a3 3 0 0 0 3-3C17 5.8 13.9 3 10 3z"/><circle cx="6.5" cy="9" r="1" fill="currentColor"/><circle cx="9" cy="6" r="1" fill="currentColor"/><circle cx="12.5" cy="6.5" r="1" fill="currentColor"/></svg>Сурет</button>
+ <button class="tab" data-k="code" role="tab"><svg viewBox="0 0 20 20"><path class="ln" d="M7 6l-4 4 4 4M13 6l4 4-4 4M11 4l-2 12"/></svg>Код</button>
+</div>
+
+<div class="board rise" style="--d:.1s">
+ <svg id="stage" viewBox="0 0 340 180" role="img" aria-label="Мұғалім мен оқушы">
+  <defs>
+   <linearGradient id="gStar" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B9A7FF"/><stop offset="1" stop-color="#7FE3C4"/></linearGradient>
+   <linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B9A7FF" stop-opacity=".25"/><stop offset="1" stop-color="#B9A7FF" stop-opacity="0"/></linearGradient>
+  </defs>
+  <path class="teacher" d="M62 52 C66 82 72 88 102 92 C72 96 66 102 62 132 C58 102 52 96 22 92 C52 88 58 82 62 52Z" fill="url(#gStar)"/>
+  <text class="lbl" x="62" y="160" id="tLbl">Gemini</text>
+  <path id="beamPath" class="beam" d="M106 92 C150 54, 196 54, 214 88"/>
+  <g class="flow">
+   <text><tspan id="f0">ә</tspan><animateMotion dur="1.5s" repeatCount="indefinite" begin="0s"><mpath href="#beamPath"/></animateMotion></text>
+   <text><tspan id="f1">қ</tspan><animateMotion dur="1.5s" repeatCount="indefinite" begin=".5s"><mpath href="#beamPath"/></animateMotion></text>
+   <text><tspan id="f2">ң</tspan><animateMotion dur="1.5s" repeatCount="indefinite" begin="1s"><mpath href="#beamPath"/></animateMotion></text>
+  </g>
+  <g class="student">
+   <circle cx="268" cy="92" r="52" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="4"/>
+   <circle id="ring" cx="268" cy="92" r="52" fill="none" stroke="#B9A7FF" stroke-width="4" stroke-linecap="round"
+     stroke-dasharray="326.7" stroke-dashoffset="326.7" transform="rotate(-90 268 92)"/>
+   <line x1="268" y1="58" x2="268" y2="46" stroke="#F2F2F2" stroke-width="2.5"/>
+   <circle class="bulb" cx="268" cy="42" r="5" fill="#B9A7FF"/>
+   <rect x="223" y="80" width="8" height="18" rx="3" fill="#F2F2F2"/>
+   <rect x="305" y="80" width="8" height="18" rx="3" fill="#F2F2F2"/>
+   <rect x="230" y="58" width="76" height="64" rx="18" fill="#1C1C22" stroke="#F2F2F2" stroke-width="2.5"/>
+   <rect x="240" y="70" width="56" height="40" rx="10" fill="#050506"/>
+   <circle class="eye" cx="256" cy="87" r="5" fill="#B9A7FF"/>
+   <circle class="eye" cx="280" cy="87" r="5" fill="#B9A7FF"/>
+   <path class="mouth" d="M261 99 Q268 103 275 99" fill="none" stroke="#B9A7FF" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+  <path class="spark" style="--d:0s" d="M222 40 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#B9A7FF"/>
+  <path class="spark" style="--d:.12s" d="M318 34 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" fill="#7FE3C4"/>
+  <path class="spark" style="--d:.24s" d="M324 128 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#B9A7FF"/>
+  <path class="spark" style="--d:.06s" d="M214 132 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" fill="#F2F2F2"/>
+  <text class="lbl" x="268" y="166">QWQ</text>
+ </svg>
+
+ <div class="qa">
+  <div class="panel show" data-k="lang">
+   <div class="t">Сұрақ</div>
+   <div class="q" id="qText">QWQ әлі ештеңе білмейді.</div>
+   <div class="t">QWQ жауабы</div>
+   <div class="ans" id="aText">…</div>
+   <div class="ok" id="okText"></div>
+  </div>
+  <div class="panel" data-k="math">
+   <span class="lvl" id="mLevel">Деңгей 1</span>
+   <div class="eq"><span id="mQ">? + ? =</span><span class="ans" id="mA"></span>
+    <svg id="mMark" viewBox="0 0 30 30" aria-hidden="true"><path id="mMarkP" d=""/></svg></div>
+   <div class="ok" id="mOk"></div>
+  </div>
+  <div class="panel" data-k="art">
+   <div class="t">Сөз: <b id="aWord">—</b></div>
+   <div class="pix">
+    <figure><svg id="gT" viewBox="0 0 16 16"></svg><figcaption>Мұғалім салды</figcaption></figure>
+    <figure><svg id="gS" viewBox="0 0 16 16"></svg><figcaption>QWQ салды</figcaption></figure>
+   </div>
+  </div>
+  <div class="panel" data-k="code">
+   <div class="t">Тапсырма</div>
+   <div class="q" id="cTask">QWQ әлі код жаза алмайды.</div>
+   <div class="t">QWQ жазған код</div>
+   <pre class="codebox" id="cCode"></pre>
+   <span class="badge" id="cBadge"></span>
+  </div>
+ </div>
+
+ <div class="stats">
+  <div class="stat">
+   <svg viewBox="0 0 30 30" aria-hidden="true"><path class="ico" style="--d:.4s" d="M5 7c4-2 7-2 10 1 3-3 6-3 10-1v16c-4-2-7-2-10 1-3-3-6-3-10-1zM15 8v16"/></svg>
+   <div><b id="s1">0</b><span id="l1">сабақ</span></div>
+  </div>
+  <div class="stat">
+   <svg viewBox="0 0 30 30" aria-hidden="true"><path class="ico" style="--d:.55s" d="M5 23l6-16 6 16M7.5 17h7M19 23V12m0 0c0-3 6-3 6 1v10"/></svg>
+   <div><b id="s2">0</b><span id="l2">оқыған әріп</span></div>
+  </div>
+  <div class="stat">
+   <svg viewBox="0 0 30 30" aria-hidden="true"><path class="ico" style="--d:.7s" d="M15 4a11 11 0 1 0 .01 0M15 10a5 5 0 1 0 .01 0M15 15l8-8M20 5l3 2-2 3"/></svg>
+   <div><b id="s3">—</b><span id="l3">қателік</span></div>
+  </div>
+ </div>
+ <svg id="chart" viewBox="0 0 600 100" preserveAspectRatio="none" aria-label="Қателік графигі">
+  <path id="cArea" d=""/><path id="cLine" d=""/><circle id="cDot" r="0" cx="0" cy="0"/>
+ </svg>
+</div>
+
+<div class="row rise" style="--d:.2s">
+ <button class="big" id="teachBtn" disabled>
+  <svg viewBox="0 0 20 20" aria-hidden="true"><path id="icoPlay" d="M6 4l10 6-10 6z" fill="currentColor"/><rect id="icoStop" x="5" y="5" width="10" height="10" rx="2" fill="currentColor"/></svg>
+  <span id="teachLbl">Жүктелуде…</span>
+ </button>
+</div>
+<div id="prog"><i></i></div>
+<div id="status"></div>
+
+<section class="rise" style="--d:.3s">
+ <h2><svg viewBox="0 0 22 22" aria-hidden="true"><path class="ln wig" d="M4 5h14v9H9l-4 4v-4H4z"/></svg>QWQ-мен сөйлесу</h2>
+ <div class="chats"><div class="show" data-k="lang"></div><div data-k="math"></div><div data-k="art"></div><div data-k="code"></div></div>
+ <div class="row" style="margin-top:0">
+  <input id="msg" placeholder="Сұрағыңды жаз…" autocomplete="off">
+  <button id="sendBtn" aria-label="Сұрау"><svg viewBox="0 0 20 20"><path class="ln" d="M3 10h13M11 5l5 5-5 5"/></svg></button>
+ </div>
+</section>
+
+<details class="rise" style="--d:.4s">
+ <summary><svg viewBox="0 0 20 20" aria-hidden="true"><path class="ln" d="M4 4h9l3 3v9H4zM7 9h6M7 12h6"/></svg>Соңғы сабақ
+  <svg class="chev" viewBox="0 0 20 20"><path class="ln" d="M5 8l5 5 5-5"/></svg></summary>
+ <div class="body"><pre id="lessonText">Әзірге сабақ болған жоқ.</pre></div>
+</details>
+
+<details id="setBox" class="rise" style="--d:.5s">
+ <summary><svg viewBox="0 0 20 20" aria-hidden="true"><g class="gear"><circle class="ln" cx="10" cy="10" r="3"/><path class="ln" d="M10 2v3M10 15v3M2 10h3M15 10h3M4.3 4.3l2.1 2.1M13.6 13.6l2.1 2.1M4.3 15.7l2.1-2.1M13.6 6.4l2.1-2.1"/></g></svg>Баптаулар
+  <svg class="chev" viewBox="0 0 20 20"><path class="ln" d="M5 8l5 5 5-5"/></svg></summary>
+ <div class="body">
+  <label for="gKey">Gemini API кілті (Тіл мен Сурет үшін)</label>
+  <input id="gKey" type="password" placeholder="AIza…">
+  <label for="gModel">Gemini моделі</label>
+  <input id="gModel" value="gemini-2.5-flash">
+  <label for="size">Жаңа мидың өлшемі</label>
+  <select id="size"><option value="big">Үлкен — ақылды (ұсынылады)</option><option value="huge">Алып — ең ақылды, бірақ ең баяу</option><option value="small">Кіші — жылдам, бірақ әлсіз</option></select>
+  <label for="fbCfg">Firebase config — Firebase консолінен (Project settings → Your apps) көшіріп осында қой</label>
+  <textarea id="fbCfg" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;AIza…&quot;,&#10;  projectId: &quot;my-project&quot;,&#10;  …&#10;};"></textarea>
+  <div id="fbOk"></div>
+  <div class="row">
+   <button id="saveSet">Сақтау</button>
+   <button class="ghost" id="resetBtn">Осы дағдыны нөлдеу</button>
+  </div>
+  <p class="hint">Өлшем тек жаңа немесе нөлделген миға қолданылады. Үлкен ми көп орын алады, сондықтан Firebase қосқан жөн. Firestore → Rules бөліміне: <code>match /qwq_ai/{d} { allow read, write: if true; }</code></p>
+ </div>
+</details>
+</main>
+<script>
+// ===== Жалпы =====
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CHUNK = 700000, CCHUNK = 300000;
+let cfg = JSON.parse(localStorage.getItem('oq_cfg')||'{}');
+let active = 'lang', running = false, busy = false;
+
+// --- Тіл ---
+const VOCAB = '\u0000 \nабвгғдеёжзийкқлмнңоөпрстуұүфхһцчшщъыіьэюяabcdefghijklmnopqrstuvwxyz0123456789.,!?:;-()"\'%';
+const V = VOCAB.length, SEQ = 48;
+const IDX = {}; [...VOCAB].forEach((c,i)=>IDX[c]=i);
+const TOPICS = ['сәлемдесу','өзін таныстыру','отбасы','сандар','түстер','жануарлар','тамақ','ауа райы','уақыт пен күн','мектеп','үй','дене мүшелері','киім','көлік','мамандықтар','Қазақстан','табиғат','спорт','сезімдер','достық','компьютер мен интернет','денсаулық','саяхат','ас үй','жыл мезгілдері'];
+const norm = t => t.toLowerCase().replace(/[«»“”„]/g,'"').replace(/[—–]/g,'-').replace(/\r/g,'').split('').filter(c=>IDX[c]!==undefined && c!=='\u0000').join('');
+const enc = t => [...t].map(c=>IDX[c]??0);
+
+// --- Математика ---
+const MV = '\u0000 0123456789+-×=\n', ML = 14;
+const MIDX = {}; [...MV].forEach((c,i)=>MIDX[c]=i);
+const LEVELS = ['Бір таңбалы қосу','Екі таңбалы қосу','Азайту','Көбейту кестесі','Аралас есептер'];
+
+// --- Сурет ---
+const WORDS = ['күн','ай','жұлдыз','бұлт','жаңбыр','үй','ағаш','гүл','жүрек','мысық','балық','құс','алма','көлік','адам','тау','қайық','қоңырау','кілт','шам','кесе','жебе','күлкі','саңырауқұлақ'];
+
+const S = {
+  lang:{pre:'',  label:'Gemini',    flow:['ә','қ','ң'], ph:'Сұрағыңды жаз…',          stats:['сабақ','оқыған әріп','қателік']},
+  math:{pre:'m_',label:'Есептеуіш', flow:['7','+','2'], ph:'Мысалы: 12+7 немесе 6×8', stats:['сабақ','деңгей','дәлдік']},
+  art: {pre:'a_',label:'Gemini',    flow:['■','◆','●'], ph:'Сөз жаз: күн, үй, мысық…', stats:['сабақ','сурет','қателік']},
+  code:{pre:'k_',label:'Gemini',    flow:['{','}','<'], ph:'Тапсырма: екі санды қосатын функция', stats:['сабақ','синтаксис','қателік']},
+};
+const freshMeta = () => ({lessons:0, losses:[], level:0, acc:0});
+
+// ===== Анимация көмекшілері =====
+const stage = $('stage');
+function setMode(m){ stage.classList.remove('teach','learn','talk'); if(m) stage.classList.add(m); }
+function happy(){ stage.classList.remove('happy'); void stage.getBoundingClientRect(); stage.classList.add('happy'); setTimeout(()=>stage.classList.remove('happy'),1300); }
+function setRing(p){ $('ring').style.strokeDashoffset = 326.7*(1-p); $('prog').querySelector('i').style.width = (p*100)+'%'; }
+function progOn(on){ $('prog').classList.toggle('on',on); if(!on) setTimeout(()=>setRing(0),500); }
+async function status(t, err){ const s=$('status'); s.classList.add('fade'); await sleep(150); s.textContent=t; s.classList.toggle('err',!!err); s.classList.remove('fade'); }
+async function typeText(el, text, speed=28){
+  el.textContent=''; const c=document.createElement('span'); c.className='caret';
+  const tx=document.createTextNode(''); el.append(tx,c);
+  for(const ch of text){ tx.data+=ch; if(!REDUCED) await sleep(speed); }
+  await sleep(300); c.remove();
+}
+function animNum(el, to, fmt=v=>Math.round(v)){
+  const from = +el.dataset.v || 0; el.dataset.v = to;
+  if(from===to){ el.textContent=fmt(to); return; }
+  el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+  const t0=performance.now(), D=REDUCED?1:700;
+  const step=t=>{ const k=Math.min(1,(t-t0)/D), e=1-Math.pow(1-k,3); el.textContent=fmt(from+(to-from)*e); if(k<1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function ripple(e){
+  const b=e.currentTarget, r=b.getBoundingClientRect(), s=Math.max(r.width,r.height), d=document.createElement('span');
+  d.className='ripple'; d.style.cssText=`width:${s}px;height:${s}px;left:${e.clientX-r.left-s/2}px;top:${e.clientY-r.top-s/2}px`;
+  b.append(d); setTimeout(()=>d.remove(),600);
+}
+document.querySelectorAll('button').forEach(b=>b.addEventListener('pointerdown',ripple));
+(function(){ const svg=$('dust'), NS='http://www.w3.org/2000/svg';
+  for(let i=0;i<18;i++){ const c=document.createElementNS(NS,'circle');
+    c.setAttribute('cx',(Math.random()*100)+'%'); c.setAttribute('cy',(100+Math.random()*10)+'%'); c.setAttribute('r',(1+Math.random()*2.5).toFixed(1));
+    c.style.animationDuration=(14+Math.random()*16)+'s'; c.style.animationDelay=(-Math.random()*25)+'s'; svg.append(c); }
+})();
+function gridHTML(vals){
+  let h=''; vals.forEach((v,i)=>{ if(v<0.06) return; const x=i%16, y=(i/16|0);
+    h+=`<rect class="px" x="${x+.06}" y="${y+.06}" width=".88" height=".88" rx=".18" fill-opacity="${Math.min(1,v).toFixed(2)}" style="animation-delay:${(x+y)*18}ms"/>`; });
+  return h;
+}
+function drawGrid(svg, vals){ svg.innerHTML = gridHTML(vals); }
+function setMark(ok){
+  const p=$('mMarkP'); p.classList.remove('go'); void p.getBoundingClientRect();
+  p.setAttribute('d', ok ? 'M6 16l6 6 12-13' : 'M8 8l14 14M22 8L8 22');
+  p.style.stroke = ok ? '#7FE3C4' : 'var(--pink)'; p.classList.add('go');
+}
+
+// ===== Модельдер =====
+function buildLang(size){ const huge=size==='huge', big=size==='big'||huge, m=tf.sequential();
+  m.add(tf.layers.embedding({inputDim:V, outputDim:huge?64:big?48:32, inputLength:SEQ}));
+  m.add(tf.layers.gru({units:huge?384:big?256:192, returnSequences:true}));
+  if(big) m.add(tf.layers.gru({units:huge?384:256, returnSequences:true}));
+  m.add(tf.layers.dense({units:V, activation:'softmax'}));
+  m.compile({optimizer:tf.train.adam(0.004), loss:'categoricalCrossentropy'}); return m; }
+function buildMath(size){ const huge=size==='huge', big=size==='big'||huge, m=tf.sequential();
+  m.add(tf.layers.embedding({inputDim:MV.length, outputDim:huge?32:24, inputLength:ML}));
+  m.add(tf.layers.gru({units:huge?320:big?256:160, returnSequences:true}));
+  if(big) m.add(tf.layers.gru({units:huge?256:192, returnSequences:true}));
+  m.add(tf.layers.dense({units:MV.length, activation:'softmax'})); return m; }
+function buildArt(size){ const huge=size==='huge', big=size==='big'||huge, m=tf.sequential();
+  m.add(tf.layers.embedding({inputDim:WORDS.length, outputDim:huge?96:big?64:32, inputLength:1}));
+  m.add(tf.layers.flatten());
+  m.add(tf.layers.dense({units:huge?512:big?384:192, activation:'relu'}));
+  if(big) m.add(tf.layers.dense({units:huge?512:384, activation:'relu'}));
+  m.add(tf.layers.dense({units:256, activation:'sigmoid'}));
+  m.compile({optimizer:tf.train.adam(0.003), loss:'binaryCrossentropy'}); return m; }
+// --- Код ---
+const CVOCAB = '\u0000\n§' + Array.from({length:95},(_,i)=>String.fromCharCode(32+i)).join('') + 'абвгғдеёжзийкқлмнңоөпрстуұүфхһцчшщъыіьэюяАБВГҒДЕЁЖЗИЙКҚЛМНҢОӨПРСТУҰҮФХҺЦЧШЩЪЫІЬЭЮЯ';
+const CV = CVOCAB.length, CSEQ = 64;
+const CIDX = {}; [...CVOCAB].forEach((c,i)=>CIDX[c]=i);
+const cnorm = t => t.replace(/\r/g,'').replace(/\t/g,'  ').replace(/[«»“”„]/g,'"').replace(/[‘’]/g,"'").replace(/[—–]/g,'-').split('').filter(c=>CIDX[c]!==undefined && c!=='\u0000' && c!=='§').join('');
+function buildCode(size){ const huge=size==='huge', big=size==='big'||huge, m=tf.sequential();
+  m.add(tf.layers.embedding({inputDim:CV, outputDim:huge?64:big?48:32, inputLength:CSEQ}));
+  m.add(tf.layers.gru({units:huge?448:big?320:256, returnSequences:true}));
+  if(big) m.add(tf.layers.gru({units:huge?448:320, returnSequences:true}));
+  m.add(tf.layers.dense({units:CV, activation:'softmax'}));
+  m.compile({optimizer:tf.train.adam(0.003), loss:'categoricalCrossentropy'}); return m; }
+const BUILD = {lang:buildLang, math:buildMath, art:buildArt, code:buildCode};
+
+function fresh(k, size){
+  const s=S[k]; if(s.model) s.model.dispose(); if(s.opt) s.opt.dispose();
+  s.size=size; s.model=BUILD[k](size); s.opt = k==='math' ? tf.train.adam(0.003) : null;
+  s.meta=freshMeta(); s.data=''; s.cache=null; s.last='';
+}
+
+// ===== Gemini =====
+async function gemini(prompt){
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${cfg.gModel||'gemini-2.5-flash'}:generateContent`,{
+    method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':cfg.gKey},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:1}})
+  });
+  if(!r.ok){ const e=new Error('Gemini '+r.status+': '+(await r.text()).slice(0,160)); e.code=r.status; throw e; }
+  const j = await r.json();
+  return (j.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('');
+}
+
+// ===== Сақтау =====
+const useFb = () => cfg.fbProject && cfg.fbKey;
+const fsUrl = id => `https://firestore.googleapis.com/v1/projects/${cfg.fbProject}/databases/(default)/documents/qwq_ai/${id}?key=${cfg.fbKey}`;
+async function put(id, str){
+  if(useFb()){
+    const r = await fetch(fsUrl(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{d:{stringValue:str}}})});
+    if(!r.ok) throw new Error('Firebase '+r.status+': '+(await r.text()).slice(0,160));
+  } else {
+    try{ localStorage.setItem('oq_'+id, str); }
+    catch(e){ throw new Error('Браузердегі орын толды. Баптауларда Firebase қос.'); }
+  }
+}
+async function get(id){
+  if(useFb()){
+    const r = await fetch(fsUrl(id)); if(r.status===404) return null;
+    if(!r.ok) throw new Error('Firebase '+r.status);
+    return (await r.json()).fields?.d?.stringValue ?? null;
+  }
+  return localStorage.getItem('oq_'+id);
+}
+function f32ToB64(f){ const u=new Uint8Array(f.buffer); let s=''; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); }
+function b64ToF32(b){ const s=atob(b), u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return new Float32Array(u.buffer); }
+async function save(k){
+  const s=S[k], ws=s.model.getWeights(), shapes=ws.map(w=>w.shape), datas=ws.map(w=>w.dataSync());
+  const all=new Float32Array(datas.reduce((a,d)=>a+d.length,0)); let o=0; for(const d of datas){ all.set(d,o); o+=d.length; }
+  const b64=f32ToB64(all), wParts=Math.ceil(b64.length/CHUNK), cParts=Math.ceil(s.data.length/CCHUNK);
+  for(let i=0;i<wParts;i++) await put(s.pre+'w'+i, b64.slice(i*CHUNK,(i+1)*CHUNK));
+  for(let i=0;i<cParts;i++) await put(s.pre+'c'+i, s.data.slice(i*CCHUNK,(i+1)*CCHUNK));
+  await put(s.pre+'meta', JSON.stringify({...s.meta, size:s.size, shapes, wParts, cParts, v:2}));
+}
+async function load(k){
+  const s=S[k], raw=await get(s.pre+'meta'); if(!raw) return false;
+  const mt=JSON.parse(raw), size=mt.size||'small';
+  if(size!==s.size) fresh(k,size);
+  let b64=''; for(let i=0;i<mt.wParts;i++) b64 += await get(s.pre+'w'+i);
+  let c=''; for(let i=0;i<(mt.cParts||0);i++) c += await get(s.pre+'c'+i);
+  const all=b64ToF32(b64); let o=0;
+  const ts=mt.shapes.map(sh=>{ const n=sh.reduce((a,b)=>a*b,1); const t=tf.tensor(all.slice(o,o+n),sh); o+=n; return t; });
+  s.model.setWeights(ts); ts.forEach(t=>t.dispose());
+  s.data=c; s.cache=null; s.meta={lessons:mt.lessons||0, losses:mt.losses||[], level:mt.level||0, acc:mt.acc||0};
+  return true;
+}
+function pushLoss(m, v){ m.losses.push(+v.toFixed(3)); if(m.losses.length>300) m.losses.shift(); }
+
+// ===== 1. ТІЛ =====
+function langBatch(ids, recentFrom, B){
+  const xs=new Float32Array(B*SEQ), ys=new Int32Array(B*SEQ);
+  for(let b=0;b<B;b++){
+    const lo=(b%2===0 && recentFrom < ids.length-SEQ-2) ? recentFrom : 0;
+    const st=lo+Math.floor(Math.random()*(ids.length-SEQ-1-lo));
+    for(let t=0;t<SEQ;t++){ xs[b*SEQ+t]=ids[st+t]; ys[b*SEQ+t]=ids[st+t+1]; }
+  }
+  return tf.tidy(()=>[tf.tensor2d(xs,[B,SEQ]), tf.oneHot(tf.tensor1d(ys,'int32'),V).reshape([B,SEQ,V]).toFloat()]);
+}
+async function langGenerate(prompt, n=110, temp=0.6){
+  const m=S.lang.model, ids=enc(norm(prompt)); let out='';
+  for(let i=0;i<n;i++){
+    let w=ids.slice(-SEQ); while(w.length<SEQ) w.unshift(IDX[' ']);
+    const p=tf.tidy(()=>m.predict(tf.tensor2d([w],[1,SEQ])).slice([0,SEQ-1,0],[1,1,V]).reshape([V]));
+    const arr=await p.data(); p.dispose();
+    let tot=0; const q=new Float32Array(V);
+    for(let k=1;k<V;k++){ q[k]=Math.pow(arr[k],1/temp); tot+=q[k]; }
+    let r=Math.random()*tot, idx=1; for(let k=1;k<V;k++){ r-=q[k]; if(r<=0){idx=k;break;} }
+    if(VOCAB[idx]==='\n') break; out+=VOCAB[idx]; ids.push(idx);
+  }
+  return out.trim() || '(үнсіз)';
+}
+function parseLesson(t){
+  const pairs=[]; let q=null;
+  for(const raw of t.split('\n')){
+    const m=raw.replace(/^[\s*\-\d.)]+/,'').match(/^([СсCcЖж])\s*:\s*(.+)$/); if(!m) continue;
+    const v=norm(m[2]).trim(); if(!v) continue;
+    if(/[СсCc]/.test(m[1])) q=v; else if(q){ pairs.push([q,v]); q=null; }
+  }
+  return pairs;
+}
+S.lang.lesson = async function(){
+  const s=S.lang, n=s.meta.lessons;
+  setMode('teach'); status('Мұғалім сабақ дайындап жатыр…');
+  const level = n<15 ? 'өте оңай, жауап 2-5 сөз' : n<40 ? 'оңай, жауап 4-8 сөз' : 'орташа, жауап бір толық сөйлем';
+  const pairs = parseLesson(await gemini(`Сен ештеңе білмейтін кішкентай нейрожеліге қазақ тілін үйретіп жатқан мұғалімсің. Ол әріп бойынша үйренеді, сондықтан мәтін қарапайым, сауатты және сәл қайталанатын болсын.
+Сабақ №${n+1}. Тақырып: ${TOPICS[n%TOPICS.length]}. Деңгей: ${level}.
+20 сұрақ-жауап жаз. Әр жұп қатаң осы форматта:
+С: сұрақ
+Ж: жауап
+Тек қазақша кирилл әріптері. Нөмір, тізім, түсініктеме, markdown жазба.`));
+  if(pairs.length<3) throw new Error('Gemini сабақты дұрыс форматта жазбады, қайта көремін.');
+  const text = pairs.map(([q,a])=>`с: ${q}\nж: ${a}\n`).join('');
+  s.last=text; $('lessonText').textContent=text; s.data+=text; s.meta.lessons++;
+  // оқу
+  const ids=enc(s.data), recent=Math.max(0,ids.length-text.length-SEQ), N=60; let sum=0;
+  setMode('learn'); progOn(true);
+  for(let i=0;i<N;i++){
+    const [x,y]=langBatch(ids,recent,32); sum+=await s.model.trainOnBatch(x,y); x.dispose(); y.dispose();
+    if(i%5===4){ setRing((i+1)/N); status(`Оқып жатыр… ${i+1}/${N}`); await tf.nextFrame(); }
+  }
+  pushLoss(s.meta,sum/N); progOn(false);
+  // тексеру
+  const [q,a]=pairs[Math.floor(Math.random()*pairs.length)];
+  $('okText').classList.remove('show'); await typeText($('qText'),q,18);
+  setMode('talk'); await typeText($('aText'), await langGenerate(`с: ${q}\nж:`), 35); setMode(null);
+  $('okText').textContent='Дұрысы: '+a; $('okText').classList.add('show');
+  render(); happy(); status('Сақтап жатыр…'); await save('lang');
+  status(`Сабақ №${s.meta.lessons} аяқталды, сақталды.`);
+};
+S.lang.chat = async (q, bubble) => { await typeText(bubble, await langGenerate(`с: ${q}\nж:`,140,0.7), 30); };
+
+// ===== 2. МАТЕМАТИКА =====
+const rnd = n => Math.floor(Math.random()*n);
+function mathProblem(level, review=true){
+  let lv = (review && level>0 && Math.random()<0.3) ? rnd(level) : level;
+  if(lv>=4) lv=rnd(4);
+  let a,b,op;
+  if(lv===0){ a=rnd(10); b=rnd(10); op='+'; }
+  else if(lv===1){ a=rnd(100); b=rnd(100); op='+'; }
+  else if(lv===2){ a=rnd(100); b=rnd(a+1); op='-'; }
+  else { a=1+rnd(9); b=1+rnd(9); op='×'; }
+  return {a,b,op,ans: op==='+'?a+b : op==='-'?a-b : a*b};
+}
+const rev = s => String(s).split('').reverse().join('');
+function mathBatch(level, B){
+  const X=new Float32Array(B*ML), Y=new Int32Array(B*ML), M=new Float32Array(B*ML);
+  for(let b=0;b<B;b++){
+    const p=mathProblem(level), s=`${p.a}${p.op}${p.b}=${rev(p.ans)}\n`, c=[...s].map(ch=>MIDX[ch]), st=s.indexOf('=')+1;
+    for(let t=0;t<ML;t++){
+      X[b*ML+t] = t<c.length ? c[t] : 0;
+      if(t+1<c.length){ Y[b*ML+t]=c[t+1]; if(t+1>=st) M[b*ML+t]=1; }
+    }
+  }
+  return tf.tidy(()=>({x:tf.tensor2d(X,[B,ML]), y:tf.oneHot(tf.tensor1d(Y,'int32'),MV.length).reshape([B,ML,MV.length]).toFloat(), m:tf.tensor2d(M,[B,ML])}));
+}
+async function mathAnswer(a, op, b){
+  const m=S.math.model; let s=`${a}${op}${b}=`, out='';
+  for(let i=0;i<5;i++){
+    const c=[...s].map(ch=>MIDX[ch]??0); if(c.length>=ML) break;
+    const pad=c.concat(Array(ML-c.length).fill(0));
+    const p=tf.tidy(()=>m.predict(tf.tensor2d([pad],[1,ML])).slice([0,c.length-1,0],[1,1,MV.length]).reshape([MV.length]).argMax());
+    const ch=MV[(await p.data())[0]]; p.dispose();
+    if(!/\d/.test(ch)) break; out+=ch; s+=ch;
+  }
+  return out ? rev(out) : '?';
+}
+S.math.lesson = async function(){
+  const s=S.math, N=150; let sum=0;
+  setMode('teach'); status('Есептер дайындалып жатыр…'); await sleep(600);
+  setMode('learn'); progOn(true);
+  for(let i=0;i<N;i++){
+    const {x,y,m}=mathBatch(s.meta.level,64);
+    const l=s.opt.minimize(()=>{
+      const p=s.model.apply(x,{training:true});
+      const ce=tf.neg(tf.sum(tf.mul(y,tf.log(tf.add(p,1e-7))),-1));
+      return tf.div(tf.sum(tf.mul(ce,m)),tf.sum(m));
+    }, true);
+    sum+=(await l.data())[0]; l.dispose(); x.dispose(); y.dispose(); m.dispose();
+    if(i%10===9){ setRing((i+1)/N); status(`Есеп шығарып жатыр… ${i+1}/${N}`); await tf.nextFrame(); }
+  }
+  pushLoss(s.meta,sum/N); progOn(false);
+  // емтихан
+  status('Емтихан: 20 есеп…'); let ok=0, show=null; const lines=[];
+  for(let i=0;i<20;i++){
+    const p=mathProblem(s.meta.level,false), a=await mathAnswer(p.a,p.op,p.b), good=+a===p.ans;
+    if(good) ok++; if(!show) show={p,a,good};
+    lines.push(`${p.a} ${p.op} ${p.b} = ${a}  ${good?'✓':'✗ ('+p.ans+')'}`);
+  }
+  s.meta.acc=ok/20; s.meta.lessons++; s.last='Емтихан:\n'+lines.join('\n'); $('lessonText').textContent=s.last;
+  $('mOk').classList.remove('show'); $('mA').textContent=''; $('mMarkP').setAttribute('d','');
+  await typeText($('mQ'), `${show.p.a} ${show.p.op} ${show.p.b} =`, 40);
+  setMode('talk'); await typeText($('mA'), show.a, 120); setMode(null); setMark(show.good);
+  $('mOk').textContent = show.good ? 'Дұрыс!' : 'Дұрысы: '+show.p.ans; $('mOk').classList.add('show');
+  let up=false; if(s.meta.acc>=0.9 && s.meta.level<4){ s.meta.level++; up=true; }
+  render(); happy(); status('Сақтап жатыр…'); await save('math');
+  status(up ? `Деңгей көтерілді! Енді: ${LEVELS[s.meta.level]}` : `Сабақ №${s.meta.lessons}: емтихан ${ok}/20`);
+};
+S.math.chat = async (q, bubble) => {
+  const m=q.replace(/\s/g,'').match(/^(\d{1,2})([+\-×xх*])(\d{1,2})$/i);
+  if(!m){ await typeText(bubble,'Маған 12+7, 50-8 немесе 6×8 сияқты есеп жаз.',20); return; }
+  const op = m[2]==='+'?'+':m[2]==='-'?'-':'×', a=+m[1], b=+m[3];
+  const ans=await mathAnswer(a,op,b), real= op==='+'?a+b:op==='-'?a-b:a*b;
+  await typeText(bubble, `${a} ${op} ${b} = ${ans}  ${+ans===real?'✓':'✗ (дұрысы '+real+')'}`, 40);
+};
+
+// ===== 3. СУРЕТ =====
+function parseArt(t){
+  const out=[]; const lines=t.replace(/```\w*/g,'').split('\n'); let cur=null, rows=[];
+  const flush=()=>{ if(cur!==null && rows.length===16) out.push({i:cur, bits:rows.join('')}); cur=null; rows=[]; };
+  for(const raw of lines){
+    const w=raw.match(/^\s*(сөз|соз|word)\s*:\s*(.+)$/i);
+    if(w){ flush(); const i=WORDS.indexOf(w[2].trim().toLowerCase().replace(/[^а-яәғқңөұүһі]/g,'')); cur = i>=0 ? i : null; continue; }
+    if(cur===null) continue;
+    const r=raw.replace(/[\s`|]/g,'').replace(/[1X█■▓]/g,'#').replace(/[0_\-·░□]/g,'.');
+    if(/^[#.]{16}$/.test(r) && rows.length<16) rows.push(r.replace(/#/g,'1').replace(/\./g,'0'));
+  }
+  flush(); return out;
+}
+function artCache(){
+  const s=S.art; if(s.cache) return s.cache;
+  const L=s.data.split('\n').filter(Boolean), X=[], Y=new Float32Array(L.length*256);
+  L.forEach((l,j)=>{ const [i,b]=l.split(':'); X.push(+i); for(let k=0;k<256;k++) Y[j*256+k]=b.charCodeAt(k)===49?1:0; });
+  return s.cache={X,Y,n:L.length};
+}
+async function artPredict(i){ return tf.tidy(()=>Array.from(S.art.model.predict(tf.tensor2d([[i]],[1,1])).dataSync())); }
+S.art.lesson = async function(){
+  const s=S.art; setMode('teach'); status('Мұғалім сурет салып жатыр…');
+  const words=[...WORDS].sort(()=>Math.random()-.5).slice(0,6);
+  const draws=parseArt(await gemini(`Сен 16×16 пиксельдік қарапайым ақ-қара суреттер салатын мұғалімсің. Мына сөздердің әрқайсысына бір-бір сурет сал: ${words.join(', ')}.
+Формат қатаң, әр сурет үшін:
+СӨЗ: күн
+одан кейін дәл 16 жол, әр жолда дәл 16 таңба: # (боялған) немесе . (бос)
+Суреттер арасында бір бос жол. Сөзді дәл мен жазғандай жаз. Пішіндер қалың, ортада, оңай танылатын болсын. Басқа ештеңе жазба.`));
+  if(draws.length<2) throw new Error('Gemini суретті дұрыс форматта салмады, қайта көремін.');
+  s.data += draws.map(d=>d.i+':'+d.bits).join('\n')+'\n'; s.cache=null;
+  s.last = draws.map(d=>WORDS[d.i]+'\n'+d.bits.match(/.{16}/g).join('\n').replace(/1/g,'#').replace(/0/g,'.')).join('\n\n');
+  $('lessonText').textContent=s.last; s.meta.lessons++;
+  // оқу
+  const c=artCache(), N=120, B=Math.min(32,c.n); let sum=0;
+  setMode('learn'); progOn(true);
+  for(let i=0;i<N;i++){
+    const xs=new Float32Array(B), ys=new Float32Array(B*256);
+    for(let b=0;b<B;b++){ const j=rnd(c.n); xs[b]=c.X[j]; ys.set(c.Y.subarray(j*256,j*256+256), b*256); }
+    const x=tf.tensor2d(xs,[B,1]), y=tf.tensor2d(ys,[B,256]);
+    sum+=await s.model.trainOnBatch(x,y); x.dispose(); y.dispose();
+    if(i%10===9){ setRing((i+1)/N); status(`Сурет салуды үйреніп жатыр… ${i+1}/${N}`); await tf.nextFrame(); }
+  }
+  pushLoss(s.meta,sum/N); progOn(false);
+  // көрсету
+  const d=draws[rnd(draws.length)];
+  $('gT').innerHTML=''; $('gS').innerHTML='';
+  await typeText($('aWord'), WORDS[d.i], 40);
+  drawGrid($('gT'), [...d.bits].map(Number)); await sleep(500);
+  setMode('talk'); await sleep(300); drawGrid($('gS'), await artPredict(d.i)); await sleep(700); setMode(null);
+  render(); happy(); status('Сақтап жатыр…'); await save('art');
+  status(`Сабақ №${s.meta.lessons} аяқталды, сақталды.`);
+};
+S.art.chat = async (q, bubble) => {
+  const i=WORDS.indexOf(q.trim().toLowerCase());
+  if(i<0){ await typeText(bubble,'Бұл сөзді әлі білмеймін. Білетіндерім: '+WORDS.join(', '),12); return; }
+  setMode('talk'); await sleep(400);
+  bubble.innerHTML=`<svg class="mini" viewBox="0 0 16 16">${gridHTML(await artPredict(i))}</svg>`;
+  await sleep(600); setMode(null);
+};
+
+// ===== 4. КОД =====
+const CTOPICS = ['айнымалылар','арифметика','шарт (if/else)','for циклі','while циклі','функциялар','массивтер','массив әдістері (map, filter)','жолдар (string)','объектілер','тексеру және қателер','рекурсия','сұрыптау','санау және статистика','класстар','кездейсоқ сандар','күн мен уақыт','JSON','DOM элементін өзгерту','оқиғалар (click)'];
+function syntaxOk(code){ try{ new Function(code); return true; }catch(e){ return false; } } // тек тексереді, іске қоспайды
+function parseCode(t){
+  const out=[]; let task=null, buf=null;
+  for(const raw of t.replace(/```\w*/g,'').split('\n')){
+    const m=raw.match(/^\s*[ТтT]\s*:\s*(.+)$/);
+    if(m && buf===null){ task=m[1].trim(); buf=[]; continue; }
+    if(raw.trim()==='###'){ if(task && buf && buf.length) out.push([task, buf.join('\n').trim()]); task=null; buf=null; continue; }
+    if(buf!==null) buf.push(raw);
+  }
+  return out.map(([a,b])=>[cnorm(a).trim(), cnorm(b)]).filter(([a,b])=>a && b && syntaxOk(b));
+}
+function codeBatch(ids, recentFrom, B){
+  const xs=new Float32Array(B*CSEQ), ys=new Int32Array(B*CSEQ);
+  for(let b=0;b<B;b++){
+    const lo=(b%2===0 && recentFrom < ids.length-CSEQ-2) ? recentFrom : 0;
+    const st=lo+Math.floor(Math.random()*(ids.length-CSEQ-1-lo));
+    for(let t=0;t<CSEQ;t++){ xs[b*CSEQ+t]=ids[st+t]; ys[b*CSEQ+t]=ids[st+t+1]; }
+  }
+  return tf.tidy(()=>[tf.tensor2d(xs,[B,CSEQ]), tf.oneHot(tf.tensor1d(ys,'int32'),CV).reshape([B,CSEQ,CV]).toFloat()]);
+}
+async function codeGenerate(task, n=320, temp=0.5){
+  const m=S.code.model, ids=[...cnorm(`т: ${task}\nк:\n`)].map(c=>CIDX[c]); let out='';
+  for(let i=0;i<n;i++){
+    let w=ids.slice(-CSEQ); while(w.length<CSEQ) w.unshift(CIDX['\n']);
+    const p=tf.tidy(()=>m.predict(tf.tensor2d([w],[1,CSEQ])).slice([0,CSEQ-1,0],[1,1,CV]).reshape([CV]));
+    const arr=await p.data(); p.dispose();
+    let tot=0; const q=new Float32Array(CV);
+    for(let k=1;k<CV;k++){ q[k]=Math.pow(arr[k],1/temp); tot+=q[k]; }
+    let r=Math.random()*tot, idx=1; for(let k=1;k<CV;k++){ r-=q[k]; if(r<=0){idx=k;break;} }
+    if(CVOCAB[idx]==='§') break; out+=CVOCAB[idx]; ids.push(idx);
+  }
+  return out.replace(/\n+$/,'').replace(/^\n+/,'');
+}
+function showBadge(ok){ const b=$('cBadge'); b.className='badge'; void b.offsetWidth; b.textContent=ok?'✓ Синтаксис дұрыс':'✗ Синтаксис қате'; b.className='badge show '+(ok?'ok':'bad'); }
+S.code.lesson = async function(){
+  const s=S.code, n=s.meta.lessons;
+  setMode('teach'); status('Мұғалім код сабағын дайындап жатыр…');
+  const level = n<15 ? 'өте оңай, 1-4 жол' : n<40 ? 'оңай, 3-8 жол' : 'орташа, 5-15 жол';
+  const items = parseCode(await gemini(`Сен ештеңе білмейтін кішкентай нейрожеліге JavaScript-те код жазуды үйретіп жатқан мұғалімсің. Ол әріп бойынша үйренеді, сондықтан код қарапайым, таза, бір стильде болсын.
+Сабақ №${n+1}. Тақырып: ${CTOPICS[n%CTOPICS.length]}. Деңгей: ${level}.
+10 тапсырма жаз. Әрқайсысы қатаң осы форматта:
+Т: тапсырма қазақша, бір сөйлем
+код (таза JavaScript, 2 бос орынмен шегіну)
+###
+Ережелер: import/export, сыртқы кітапхана, жоғарғы деңгейдегі await, түсініктеме жазба. Markdown жазба. Әр код жеке өзі дұрыс жұмыс істейтін болсын.`));
+  if(items.length<3) throw new Error('Gemini код сабағын дұрыс форматта жазбады, қайта көремін.');
+  const text = items.map(([a,b])=>`т: ${a}\nк:\n${b}\n§\n`).join('');
+  s.last = items.map(([a,b])=>`Т: ${a}\n${b}`).join('\n\n'); $('lessonText').textContent=s.last;
+  s.data += text; s.meta.lessons++;
+  // оқу
+  const ids=[...s.data].map(c=>CIDX[c]??0), recent=Math.max(0,ids.length-text.length-CSEQ), N=80; let sum=0;
+  setMode('learn'); progOn(true);
+  for(let i=0;i<N;i++){
+    const [x,y]=codeBatch(ids,recent,32); sum+=await s.model.trainOnBatch(x,y); x.dispose(); y.dispose();
+    if(i%5===4){ setRing((i+1)/N); status(`Код оқып жатыр… ${i+1}/${N}`); await tf.nextFrame(); }
+  }
+  pushLoss(s.meta,sum/N); progOn(false);
+  // емтихан: 3 тапсырма, синтаксисін тексереміз
+  status('Емтихан: 3 тапсырма…'); setMode('talk');
+  const tests=[...items].sort(()=>Math.random()-.5).slice(0,3); let ok=0, first=null;
+  for(const [task] of tests){ const c=await codeGenerate(task); const g=c.trim().length>0 && syntaxOk(c); if(g) ok++; if(!first) first={task,c,g}; }
+  s.meta.acc = s.meta.acc ? s.meta.acc*0.6 + (ok/3)*0.4 : ok/3;
+  $('cBadge').className='badge'; await typeText($('cTask'), first.task, 18);
+  await typeText($('cCode'), first.c || '(бос)', 10); setMode(null); showBadge(first.g);
+  render(); happy(); status('Сақтап жатыр…'); await save('code');
+  status(`Сабақ №${s.meta.lessons}: емтихан ${ok}/3 код синтаксисі дұрыс.`);
+};
+S.code.chat = async (q, bubble) => {
+  const c = await codeGenerate(q, 400, 0.5);
+  bubble.innerHTML=''; const pre=document.createElement('pre'); bubble.append(pre);
+  await typeText(pre, c || '(бос)', 8);
+  const tag=document.createElement('div'); tag.style.cssText='font-size:12px;margin-top:6px;color:var(--dim)';
+  tag.textContent = c && syntaxOk(c) ? '✓ синтаксис дұрыс' : '✗ синтаксис қате'; bubble.append(tag);
+};
+
+// ===== UI =====
+function drawChart(L){
+  const line=$('cLine'), area=$('cArea'), dot=$('cDot');
+  if(L.length<2){ line.setAttribute('d',''); area.setAttribute('d',''); dot.setAttribute('r',0); return; }
+  const mx=Math.max(...L), mn=Math.min(...L), W=600, H=100, pad=8;
+  const pts=L.map((v,i)=>[i/(L.length-1)*W, pad+(mx===mn?.5:(v-mn)/(mx-mn))*(H-2*pad)]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  line.setAttribute('d',d); area.setAttribute('d', d+` L${W} ${H} L0 ${H}Z`);
+  const len=line.getTotalLength();
+  line.style.transition='none'; line.style.strokeDasharray=len; line.style.strokeDashoffset=len;
+  area.classList.remove('on'); line.getBoundingClientRect();
+  line.style.transition='stroke-dashoffset 1.2s ease'; line.style.strokeDashoffset=0; area.classList.add('on');
+  const last=pts[pts.length-1]; dot.setAttribute('cx',last[0]-3); dot.setAttribute('cy',last[1]); dot.setAttribute('r',4);
+}
+function render(){
+  const s=S[active], m=s.meta, L=m.losses;
+  animNum($('s1'), m.lessons);
+  if(active==='lang') animNum($('s2'), s.data.length, v=>v>9999?Math.round(v/1000)+'k':Math.round(v));
+  else if(active==='math') animNum($('s2'), m.level+1);
+  else if(active==='art') animNum($('s2'), (s.data.match(/\n/g)||[]).length);
+  else animNum($('s2'), Math.round(m.acc*100), v=>Math.round(v)+'%');
+  if(active==='math') animNum($('s3'), Math.round(m.acc*100), v=>Math.round(v)+'%');
+  else if(L.length) animNum($('s3'), L[L.length-1], v=>v.toFixed(2));
+  else { $('s3').textContent='—'; $('s3').dataset.v=0; }
+  if(active==='math') $('mLevel').textContent=`Деңгей ${m.level+1}: ${LEVELS[m.level]}`;
+  drawChart(L);
+}
+function setActive(k){
+  if(running) stop();
+  active=k; const s=S[k], i=['lang','math','art','code'].indexOf(k);
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.k===k));
+  $('tabInd').style.transform=`translateX(${i*100}%)`;
+  document.querySelectorAll('.panel,.chats>div').forEach(p=>p.classList.toggle('show',p.dataset.k===k));
+  ['l1','l2','l3'].forEach((id,j)=>$(id).textContent=s.stats[j]);
+  s.flow.forEach((c,j)=>$('f'+j).textContent=c); $('tLbl').textContent=s.label;
+  $('msg').placeholder=s.ph; $('lessonText').textContent=s.last||'Әзірге сабақ болған жоқ.';
+  render();
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>setActive(t.dataset.k));
+
+async function loop(){
+  while(running){
+    try{ await S[active].lesson(); }
+    catch(e){
+      setMode(null); progOn(false);
+      if(e.code===429){ status('Gemini лимиті толды, 40 секунд күтеміз…', true); await sleep(40000); }
+      else if(/форматта/.test(e.message)) status(e.message, true);
+      else { status(e.message, true); stop(); }
+    }
+  }
+  setMode(null);
+}
+function stop(){ running=false; $('teachBtn').classList.remove('running'); $('teachLbl').textContent='Үйретуді бастау'; }
+$('teachBtn').onclick = () => {
+  if(running){ stop(); status('Үйрету тоқтады.'); return; }
+  if(active!=='math' && !cfg.gKey){ $('setBox').open=true; status('Алдымен Gemini кілтін енгіз.', true); return; }
+  running=true; $('teachBtn').classList.add('running'); $('teachLbl').textContent='Тоқтату'; loop();
+};
+
+async function ask(){
+  const q=$('msg').value.trim(); if(!q||busy) return;
+  if(running){ status('Сабақ кезінде күте тұр немесе тоқтат.',true); return; }
+  busy=true; $('msg').value='';
+  const box=document.querySelector(`.chats>div[data-k="${active}"]`);
+  const add=c=>{ const d=document.createElement('div'); d.className='m '+c; box.append(d); return d; };
+  add('u').textContent=q;
+  const a=add('a'); a.innerHTML='<svg class="dots" width="30" height="12" viewBox="0 0 30 12"><circle cx="5" cy="6" r="3"/><circle cx="15" cy="6" r="3"/><circle cx="25" cy="6" r="3"/></svg>';
+  setMode('talk'); await sleep(400);
+  try{ await S[active].chat(q,a); }catch(e){ a.textContent='Қате: '+e.message; }
+  setMode(null); busy=false;
+}
+$('sendBtn').onclick=ask;
+$('msg').onkeydown=e=>{ if(e.key==='Enter') ask(); };
+
+['gKey','gModel','size'].forEach(k=>{ if(cfg[k]) $(k).value=cfg[k]; });
+if(cfg.fbRaw) $('fbCfg').value=cfg.fbRaw;
+function parseFb(t){ const g=k=>(t.match(new RegExp(k+'["\']?\\s*:\\s*["\']([^"\']+)'))||[])[1]||''; return {p:g('projectId'),k:g('apiKey')}; }
+function cloudBadge(){ const on=useFb(); $('cloud').classList.toggle('on',on); $('cloudTxt').textContent=on?'Firebase':'Жергілікті'; $('fbOk').textContent=on?'✓ Қосылды: '+cfg.fbProject:''; }
+$('saveSet').onclick = async () => {
+  ['gKey','gModel','size'].forEach(k=>cfg[k]=$(k).value.trim());
+  cfg.fbRaw=$('fbCfg').value.trim(); const fb=parseFb(cfg.fbRaw); cfg.fbProject=fb.p; cfg.fbKey=fb.k;
+  if(cfg.fbRaw && !(fb.p&&fb.k)){ status('Firebase config ішінен apiKey мен projectId табылмады.',true); return; }
+  localStorage.setItem('oq_cfg', JSON.stringify(cfg));
+  status('Баптаулар сақталды. QWQ жүктелуде…'); await init();
+};
+$('resetBtn').onclick = async () => {
+  if(!confirm(`«${document.querySelector('.tab.on').textContent.trim()}» дағдысы толық ұмытылады. Сенімдісің бе?`)) return;
+  stop(); try{ await put(S[active].pre+'meta',''); }catch(e){}
+  fresh(active, cfg.size||'big');
+  if(active==='lang'){ $('qText').textContent='QWQ әлі ештеңе білмейді.'; $('aText').textContent='…'; $('okText').classList.remove('show'); }
+  if(active==='math'){ $('mQ').textContent='? + ? ='; $('mA').textContent=''; $('mMarkP').setAttribute('d',''); $('mOk').classList.remove('show'); }
+  if(active==='art'){ $('aWord').textContent='—'; $('gT').innerHTML=''; $('gS').innerHTML=''; }
+  if(active==='code'){ $('cTask').textContent='QWQ әлі код жаза алмайды.'; $('cCode').textContent=''; $('cBadge').className='badge'; }
+  setActive(active); status('Дағды нөлденді.');
+};
+
+async function init(){
+  cloudBadge(); if(!useFb()) $('setBox').open=true;
+  stop(); $('teachBtn').disabled=true; const msgs=[];
+  for(const k of ['lang','math','art','code']){
+    fresh(k, cfg.size||'big');
+    try{ if(await load(k)) msgs.push(`${S[k].meta.lessons}`); else msgs.push('0'); }
+    catch(e){ msgs.push('?'); status(`Жүктеу қатесі (${k}): ${e.message}`, true); }
+  }
+  setActive(active);
+  if(!$('status').classList.contains('err'))
+    status(`Сабақтар: тіл ${msgs[0]}, математика ${msgs[1]}, сурет ${msgs[2]}, код ${msgs[3]}. ${useFb()?'Firebase қосулы.':'Білім осы браузерде сақталады.'}`);
+  if(msgs.some(m=>m!=='0'&&m!=='?')) happy();
+  $('teachBtn').disabled=false; $('teachLbl').textContent='Үйретуді бастау';
+}
+init();
+</script>
+</body>
+</html>
